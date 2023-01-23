@@ -1,0 +1,37 @@
+.TH SND "1" "January 2023" "User Commands"
+.SH NAME
+snd \- \fI\,s\/\fRe\fI\,nd\/\fR text data to an ipv4 address and port
+.SH SYNOPSIS
+.B snd
+-i \fI\,ip_address\/\fR
+-p \fI\,port\/\fR
+[-d \fI\,text\/\fR] | [-f \fI\,file_name\/\fR]
+.SH DESCRIPTION
+.PP
+Provide text data via the
+.B -d
+or
+.B -f
+option or via stdin. That data will be send as it is
+to the provided ip (\fB\,-i\/\fR) and port (\fB\,-p\/\fR).
+If there is a response it will be written to stout.
+.TP
+\fB\,-i\/\fR, \fB\,--ip\/\fR \fI\,ip_address\/\fR
+IP address and not domain.
+.TP
+\fB\,-p\/\fR, \fB\,--port\/\fR
+Port.
+.TP
+\fB\,-d\/\fR, \fB\,--data\/\fR
+Text to send as a string.
+.TP
+\fB\,-f\/\fR, \fB\,--file\/\fR
+Path to file containing the text to send.
+.SH EXAMPLES
+.sp
+.RS 4
+snd -i 127.0.0.1 -p 80 -d "Hello World"
+
+snd -i 127.0.0.1 -p 80 -f /path/to/file
+
+echo "Hello World" | snd -i 127.0.0.1 -p 80
