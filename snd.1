@@ -1,6 +1,6 @@
 .TH SND "1" "January 2023" "User Commands"
 .SH NAME
-snd \- \fI\,s\/\fRe\fI\,nd\/\fR text data to an ipv4 address and port
+snd \- \fI\,s\/\fRe\fI\,nd\/\fR text data to an ipv4 address and port via tcp.
 .SH SYNOPSIS
 .B snd
 -i \fI\,ip_address\/\fR
@@ -13,7 +13,7 @@ Provide text data via the
 or
 .B -f
 option or via stdin. That data will be send as it is
-to the provided ip (\fB\,-i\/\fR) and port (\fB\,-p\/\fR).
+to the provided ip (\fB\,-i\/\fR) and port (\fB\,-p\/\fR) via tcp.
 If there is a response it will be written to stout.
 .TP
 \fB\,-i\/\fR, \fB\,--ip\/\fR \fI\,ip_address\/\fR

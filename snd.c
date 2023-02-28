@@ -11,10 +11,19 @@
 #include <arpa/inet.h>
 #include <getopt.h>
 
-int connectToServer(char *ip, int port)
+enum transportProtocol
+{
+	TCP,
+	UDP
+};
+
+int connectToServer(enum transportProtocol prot, char *ip, int port)
 {
 	int *fd = malloc(sizeof(int));
-	*fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (prot == TCP)
+		*fd = socket(AF_INET, SOCK_STREAM, 0);
+	else
+		*fd = socket(AF_INET, SOCK_DGRAM, 0);
 	struct sockaddr_in addr;
 	struct in_addr iaddr;
 	if (inet_aton(ip, &iaddr) == 0)
@@ -159,17 +168,22 @@ int main(int argc, char *argv[])
 		{ "port", required_argument, 0, 'p' },
 		{ "data", required_argument, 0, 'd' },
 		{ "file", required_argument, 0, 'f' },
+		{ "tcp", no_argument, 0, 't' },
+		{ "udp", no_argument, 0, 'u' },
 		{ 0, 0, 0, 0 }
 	};
 	int optionIndex = 0;
 	int o = 0;
+	enum transportProtocol prot;
+	bool isTCP = false;
+	bool isUDP = false;
 	char ip[16];
 	int port = 0;
 	bool isData = false;
 	bool isFileData = false;
 	char *data;
 	char *fileData;
-	while ((o = getopt_long(argc, argv, "i:p:d:f:", options, &optionIndex)) != -1)
+	while ((o = getopt_long(argc, argv, "i:p:d:f:tu", options, &optionIndex)) != -1)
 	{
 		switch (o)
 		{
@@ -197,8 +211,22 @@ int main(int argc, char *argv[])
 					return -1;
 				}
 				break;
+			case 't':
+				isTCP = true;
+				break;
+			case 'u':
+				isUDP = true;
+				break;
 		}
 	}
+	if (isTCP && isUDP)
+	{
+		printf("Please specify either tcp or udp, not both. Specifying nothing results in tcp.\n");
+		return -1;
+	}
+	prot = TCP;
+	if (isUDP)
+		prot = UDP;
 	if (strlen(ip) == 0)
 	{
 		printf("No ip provided.\n");
@@ -214,7 +242,7 @@ int main(int argc, char *argv[])
 		printf("Provide either data via the -d or the -f argument.\n");
 		return -1;
 	}
-	int fd = connectToServer(ip, port);
+	int fd = connectToServer(prot, ip, port);
 	if (fd == -1)
 	{
 		printf("connectToServer failed.\n");
@@ -223,6 +251,8 @@ int main(int argc, char *argv[])
 	char *res;
 	if (isData)
 	{
+		int da[] = { 0xf7, 0xa6, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x61, 0x75, 0x64, 0x69, 0x6f, 0x2d, 0x66, 0x61, 0x04, 0x73, 0x63, 0x64, 0x6e, 0x02, 0x63, 0x6f, 0x00, 0x00, 0x01, 0x00, 0x01 };
+		data = (char *)da;
 		if (snd(fd, data))
 			res = rcv(fd);
 	}
