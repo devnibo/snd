@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <getopt.h>
+#include <ctype.h>
+#include "dns.c"
 
 enum transportProtocol
 {
@@ -164,7 +166,8 @@ char *readFile(char *path)
 int main(int argc, char *argv[])
 {
 	static struct option options[] = {
-		{ "ip", required_argument, 0, 'i' },
+		// { "ip", required_argument, 0, 'i' },
+		{ "host", required_argument, 0, 'h' },
 		{ "port", required_argument, 0, 'p' },
 		{ "data", required_argument, 0, 'd' },
 		{ "file", required_argument, 0, 'f' },
@@ -177,23 +180,43 @@ int main(int argc, char *argv[])
 	enum transportProtocol prot;
 	bool isTCP = false;
 	bool isUDP = false;
-	char ip[16];
+	bool isHost = false;
+	// char ip[16];
+	char *ip;
+	// char domain[253];
+	char *domain;
+	bool isDomain = false;
 	int port = 0;
 	bool isData = false;
 	bool isFileData = false;
 	char *data;
 	char *fileData;
-	while ((o = getopt_long(argc, argv, "i:p:d:f:tu", options, &optionIndex)) != -1)
+	while ((o = getopt_long(argc, argv, "h:p:d:f:tu", options, &optionIndex)) != -1)
 	{
 		switch (o)
 		{
-			case 'i':
-				if (strlen(optarg) > 15 || strlen(optarg) < 7)
+			case 'h':
+				if (strlen(optarg) > 0)
+					isHost = true;
+				if (isHost)
 				{
-					printf("ip is not valid.\n");
-					return -1;
+					if (isdigit(optarg[0])) // Probably an ip and not domain
+					{
+						if (strlen(optarg) > 15 || strlen(optarg) < 7)
+						{
+							printf("ip is not valid.\n");
+							return -1;
+						}
+						ip = malloc(16 * sizeof(char));
+						strcpy(ip, optarg);
+					}
+					else
+					{
+						domain = malloc(strlen(optarg) * sizeof(char));
+						strcpy(domain, optarg);
+						isDomain = true;
+					}
 				}
-				strcpy(ip, optarg);
 				break;
 			case 'p':
 				port = atoi(optarg);
@@ -227,9 +250,21 @@ int main(int argc, char *argv[])
 	prot = TCP;
 	if (isUDP)
 		prot = UDP;
-	if (strlen(ip) == 0)
+	if (isHost)
 	{
-		printf("No ip provided.\n");
+		if (isDomain)
+		{
+			ip = getIPByDomain(&domain);
+			if (ip == NULL)
+			{
+				printf("getIPByDomain failed.\n");
+				return -1;
+			}
+		}
+	}
+	else
+	{
+		printf("No host provided.\n");
 		return -1;
 	}
 	if (port == 0)
@@ -251,8 +286,6 @@ int main(int argc, char *argv[])
 	char *res;
 	if (isData)
 	{
-		int da[] = { 0xf7, 0xa6, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x61, 0x75, 0x64, 0x69, 0x6f, 0x2d, 0x66, 0x61, 0x04, 0x73, 0x63, 0x64, 0x6e, 0x02, 0x63, 0x6f, 0x00, 0x00, 0x01, 0x00, 0x01 };
-		data = (char *)da;
 		if (snd(fd, data))
 			res = rcv(fd);
 	}

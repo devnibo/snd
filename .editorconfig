@@ -1,0 +1,11 @@
+[*.c]
+indent_style = tab
+indent_size = 2
+
+[*.h]
+indent_style = tab
+indent_size = 2
+
+[README.md]
+indent_style = tab
+indent_size = 2
