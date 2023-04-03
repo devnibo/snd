@@ -1,9 +1,9 @@
-.TH SND "1" "January 2023" "User Commands"
+.TH SND "1" "April 2023" "User Commands"
 .SH NAME
-snd \- \fI\,s\/\fRe\fI\,nd\/\fR text data to an ipv4 address and port via tcp.
+snd \- \fI\,s\/\fRe\fI\,nd\/\fR data to a host on a given port via tcp.
 .SH SYNOPSIS
 .B snd
--i \fI\,ip_address\/\fR
+-h \fI\,host\/\fR
 -p \fI\,port\/\fR
 [-d \fI\,text\/\fR] | [-f \fI\,file_name\/\fR]
 .SH DESCRIPTION
@@ -13,25 +13,26 @@ Provide text data via the
 or
 .B -f
 option or via stdin. That data will be send as it is
-to the provided ip (\fB\,-i\/\fR) and port (\fB\,-p\/\fR) via tcp.
+to the provided host (\fB\,-h\/\fR) and port (\fB\,-p\/\fR) via tcp.
+The host can either be a domain or an IPv4 address.
 If there is a response it will be written to stout.
 .TP
-\fB\,-i\/\fR, \fB\,--ip\/\fR \fI\,ip_address\/\fR
-IP address and not domain.
+\fB\,-h\/\fR, \fB\,--host\/\fR \fI\,host\/\fR
+IPv4 address or domain.
 .TP
 \fB\,-p\/\fR, \fB\,--port\/\fR
 Port.
 .TP
 \fB\,-d\/\fR, \fB\,--data\/\fR
-Text to send as a string.
+Data to send as a string.
 .TP
 \fB\,-f\/\fR, \fB\,--file\/\fR
-Path to file containing the text to send.
+Path to file containing the data to send.
 .SH EXAMPLES
 .sp
 .RS 4
-snd -i 127.0.0.1 -p 80 -d "Hello World"
+snd -h google.com -p 80 -d "Hello World"
 
-snd -i 127.0.0.1 -p 80 -f /path/to/file
+snd -h 127.0.0.1 -p 25 -f /path/to/file
 
-echo "Hello World" | snd -i 127.0.0.1 -p 80
+echo "Hello World" | snd -i 44.235.246.155 -p 80
