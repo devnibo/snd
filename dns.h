@@ -17,6 +17,7 @@ struct dns_header
 	bool RA;
 	bool Z[3];
 	bool RCODE[4];
+	// TODO: turn these into integers like describecd in the spec
 	char QDCOUNT[2];
 	char ANCOUNT[2];
 	char NSCOUNT[2];
