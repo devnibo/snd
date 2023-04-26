@@ -8,10 +8,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <netdb.h>
 #include <arpa/inet.h>
 #include <getopt.h>
 #include <ctype.h>
-#include "dns.c"
+
+#define UDP_PAYLOAD_SIZE 512
 
 enum transportProtocol
 {
@@ -19,45 +21,7 @@ enum transportProtocol
 	UDP
 };
 
-int connectToServer(enum transportProtocol prot, char *ip, int port)
-{
-	int *fd = malloc(sizeof(int));
-	if (prot == TCP)
-		*fd = socket(AF_INET, SOCK_STREAM, 0);
-	else
-		*fd = socket(AF_INET, SOCK_DGRAM, 0);
-	struct sockaddr_in addr;
-	struct in_addr iaddr;
-	if (inet_aton(ip, &iaddr) == 0)
-	{
-		perror("inet_aton failed.");
-		return -1;
-	}
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	addr.sin_addr = iaddr;
-	if (connect(*fd, (struct sockaddr *) &addr, (socklen_t) sizeof(addr)) == -1)
-	{
-		perror("connect failed.");
-		return -1;
-	}
-	return *fd;
-}
-
-// Do not use for reading from a socket fd
-bool tryRead(char *buf, FILE *stream)
-{
-	size_t bytesRead = fread(buf, 1, 1, stream);
-	if (feof(stream) != 0)
-		return false;
-	if (ferror(stream) != 0)
-		tryRead(buf, stream);
-	if (bytesRead != 1)
-		tryRead(buf, stream);
-	return true;
-}
-
-bool snd(int fd, char *data)
+void snd(int fd, char *data)
 {
 	int bytesWrote;
 	int leftBytes = strlen(data);
@@ -66,7 +30,6 @@ bool snd(int fd, char *data)
 		bytesWrote = write(fd, data, leftBytes);
 		leftBytes -= bytesWrote;
 	}
-	return true;
 }
 
 char *rcv(int fd)
@@ -131,6 +94,19 @@ char *readFromStdin()
 	return response;
 }
 
+// Do not use for reading from a socket fd
+bool tryRead(char *buf, FILE *stream)
+{
+	size_t bytesRead = fread(buf, 1, 1, stream);
+	if (feof(stream) != 0)
+		return false;
+	if (ferror(stream) != 0)
+		tryRead(buf, stream);
+	if (bytesRead != 1)
+		tryRead(buf, stream);
+	return true;
+}
+
 char *readFile(char *path)
 {
 	FILE *fp = fopen(path, "r");
@@ -156,17 +132,30 @@ char *readFile(char *path)
 		}
 	}
 	buffer[i] = '\0';
-	/* Remove last line break from file
-	if (buffer[i-1] == '\n')
-		buffer[i-1] = '\0'; */
 	fclose(fp);
 	return buffer;
+}
+
+struct addrinfo *getAddrInfo(char *host, char *port, enum transportProtocol prot)
+{
+	struct addrinfo *addrInfo, hints;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = prot == TCP ? SOCK_STREAM : SOCK_DGRAM;
+	hints.ai_flags = AI_NUMERICSERV;
+	hints.ai_protocol = prot == UDP ? IPPROTO_UDP : 0;
+	int ret = getaddrinfo(host, port, &hints, &addrInfo);
+	if (ret != 0)
+	{
+		printf("getaddrinfo failed. %s.\n", gai_strerror(ret));
+		return NULL;
+	}
+	return addrInfo;
 }
 
 int main(int argc, char *argv[])
 {
 	static struct option options[] = {
-		// { "ip", required_argument, 0, 'i' },
 		{ "host", required_argument, 0, 'h' },
 		{ "port", required_argument, 0, 'p' },
 		{ "data", required_argument, 0, 'd' },
@@ -181,16 +170,14 @@ int main(int argc, char *argv[])
 	bool isTCP = false;
 	bool isUDP = false;
 	bool isHost = false;
-	// char ip[16];
-	char *ip;
-	// char domain[253];
-	char *domain;
-	bool isDomain = false;
-	int port = 0;
+	char *host;
+	bool isPort = false;
+	char *port;
 	bool isData = false;
-	bool isFileData = false;
 	char *data;
+	bool isFileData = false;
 	char *fileData;
+	char *res;
 	while ((o = getopt_long(argc, argv, "h:p:d:f:tu", options, &optionIndex)) != -1)
 	{
 		switch (o)
@@ -200,30 +187,19 @@ int main(int argc, char *argv[])
 					isHost = true;
 				if (isHost)
 				{
-					if (isdigit(optarg[0])) // Probably an ip and not domain
-					{
-						if (strlen(optarg) > 15 || strlen(optarg) < 7)
-						{
-							printf("ip is not valid.\n");
-							return -1;
-						}
-						ip = malloc(16 * sizeof(char));
-						strcpy(ip, optarg);
-					}
-					else
-					{
-						domain = malloc(strlen(optarg) * sizeof(char));
-						strcpy(domain, optarg);
-						isDomain = true;
-					}
+					host = malloc(strlen(optarg) * sizeof(char));
+					strcpy(host, optarg);
 				}
 				break;
 			case 'p':
-				port = atoi(optarg);
+				isPort = true;
+				port = malloc(strlen(optarg) * sizeof(char));
+				strcpy(port, optarg);
 				break;
 			case 'd':
 				isData = true;
-				data = optarg;
+				data = malloc(strlen(optarg) * sizeof(char));
+				strcpy(data, optarg);
 				break;
 			case 'f':
 				isFileData = true;
@@ -250,24 +226,12 @@ int main(int argc, char *argv[])
 	prot = TCP;
 	if (isUDP)
 		prot = UDP;
-	if (isHost)
-	{
-		if (isDomain)
-		{
-			ip = getIPByDomain(&domain);
-			if (ip == NULL)
-			{
-				printf("getIPByDomain failed.\n");
-				return -1;
-			}
-		}
-	}
-	else
+	if (!isHost)
 	{
 		printf("No host provided.\n");
 		return -1;
 	}
-	if (port == 0)
+	if (!isPort)
 	{
 		printf("No port provided.\n");
 		return -1;
@@ -277,28 +241,56 @@ int main(int argc, char *argv[])
 		printf("Provide either data via the -d or the -f argument.\n");
 		return -1;
 	}
-	int fd = connectToServer(prot, ip, port);
-	if (fd == -1)
-	{
-		printf("connectToServer failed.\n");
-		return -1;
-	}
-	char *res;
+	char *inputData;
 	if (isData)
 	{
-		if (snd(fd, data))
-			res = rcv(fd);
+		inputData = malloc(strlen(data) * sizeof(char));
+		strcpy(inputData, data);
 	}
 	else if (isFileData)
 	{
-		if (snd(fd, fileData))
-			res = rcv(fd);
+		inputData = malloc(strlen(fileData) * sizeof(char));
+		strcpy(inputData, fileData);
 	}
 	else
 	{
-		char *stdinData = readFromStdin();
-		if (snd(fd, stdinData))
+		inputData = readFromStdin();
+	}
+	if (strlen(inputData) <= 0)
+	{
+		printf("No data provided.\n");
+		return -1;
+	}
+	struct addrinfo *addrInfo = getAddrInfo(host, port, prot);
+	int fd;
+	switch(prot)
+	{
+		case TCP:
+			fd = socket(AF_INET, SOCK_STREAM, 0);
+			if (fd == -1)
+			{
+				perror("socket failed.\n");
+				return -1;
+			}
+			if (connect(fd, addrInfo->ai_addr, addrInfo->ai_addrlen) == -1)
+			{
+				perror("connect failed");
+				return -1;
+			}
+			snd(fd, inputData);
 			res = rcv(fd);
+			break;
+		case UDP:
+			fd = socket(AF_INET, SOCK_DGRAM, 0);
+			if (fd == -1)
+			{
+				perror("socket failed.\n");
+				return -1;
+			}
+			size_t bytesSent = sendto(fd, inputData, strlen(inputData), 0, addrInfo->ai_addr, addrInfo->ai_addrlen);
+			res = malloc(UDP_PAYLOAD_SIZE * sizeof(char));
+			ssize_t bytesReceived = recvfrom(fd, res, UDP_PAYLOAD_SIZE, 0, addrInfo->ai_addr, &addrInfo->ai_addrlen);
+			break;
 	}
 	if (strcmp(res, "") != 0)
 		printf("%s\n", res);
