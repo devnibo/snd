@@ -1,6 +1,6 @@
 # snd
 
-send data to a host on a given port via tcp.
+send data to a host (only IPv4) on a given port.
 
 ## Installation
 

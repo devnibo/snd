@@ -1,11 +1,13 @@
 .TH SND "1" "April 2023" "User Commands"
 .SH NAME
-snd \- \fI\,s\/\fRe\fI\,nd\/\fR data to a host on a given port via tcp.
+snd \- \fI\,s\/\fRe\fI\,nd\/\fR data to a host (only IPv4) on a given port.
 .SH SYNOPSIS
 .B snd
--h \fI\,host\/\fR
--p \fI\,port\/\fR
-[-d \fI\,text\/\fR] | [-f \fI\,file_name\/\fR]
+.B -h \fI\,host\/\fR
+.B -p \fI\,port\/\fR
+[\fB\,-t\/\fR|\fB\,-u\/\fR]
+.B -d \fI\,text\/\fR |
+.B -f \fI\,file_name\/\fR
 .SH DESCRIPTION
 .PP
 Provide text data via the
@@ -13,7 +15,7 @@ Provide text data via the
 or
 .B -f
 option or via stdin. That data will be send as it is
-to the provided host (\fB\,-h\/\fR) and port (\fB\,-p\/\fR) via tcp.
+to the provided host (\fB\,-h\/\fR) and port (\fB\,-p\/\fR).
 The host can either be a domain or an IPv4 address.
 If there is a response it will be written to stout.
 .TP
@@ -28,6 +30,12 @@ Data to send as a string.
 .TP
 \fB\,-f\/\fR, \fB\,--file\/\fR
 Path to file containing the data to send.
+.TP
+\fB\,-t\/\fR, \fB\,--tcp\/\fR
+Use the TCP protocol. This is the default.
+.TP
+\fB\,-u\/\fR, \fB\,--udp\/\fR
+Use the UDP protocol.
 .SH EXAMPLES
 .sp
 .RS 4
