@@ -302,7 +302,7 @@ char *getIPByDomain(char **domain)
 	struct dns_question q = {
 		.QNAME			= *domain,
 		.QTYPE[0]		= 0x00,
-		.QTYPE[1]		= 0x01,
+		.QTYPE[1]		= 0x0f,
 		.QCLASS[0]	= 0x00,
 		.QCLASS[1]	= 0x01
 	};
