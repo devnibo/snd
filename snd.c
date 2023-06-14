@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
 					}
 					else
 					{
-						domain = malloc(strlen(optarg) * sizeof(char));
+						domain = malloc(strlen(optarg) + 1 * sizeof(char));
 						strcpy(domain, optarg);
 						isDomain = true;
 					}

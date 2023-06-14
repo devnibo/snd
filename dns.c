@@ -299,10 +299,11 @@ char *getIPByDomain(char **domain)
 	h.QDCOUNT[1] = 0x01;
 	h.ARCOUNT[0] = 0x00;
 	h.ARCOUNT[1] = 0x01;
+	printf("domain: %s\n", *domain);
 	struct dns_question q = {
 		.QNAME			= *domain,
 		.QTYPE[0]		= 0x00,
-		.QTYPE[1]		= 0x0f,
+		.QTYPE[1]		= 0x10,
 		.QCLASS[0]	= 0x00,
 		.QCLASS[1]	= 0x01
 	};
@@ -330,6 +331,7 @@ char *getIPByDomain(char **domain)
 	{
 		req = realloc(req, (r + 1) * sizeof(char));
 		req[r] = question->bytes[i];
+		printf("question %d: %2X %c\n", i, question->bytes[i], question->bytes[i]);
 		r++;
 	}
 	for (int i=0; i<resourceRecord->length; i++)
