@@ -187,18 +187,18 @@ int main(int argc, char *argv[])
 					isHost = true;
 				if (isHost)
 				{
-					host = malloc(strlen(optarg) * sizeof(char));
+					host = malloc(strlen(optarg)+1 * sizeof(char));
 					strcpy(host, optarg);
 				}
 				break;
 			case 'p':
 				isPort = true;
-				port = malloc(strlen(optarg) * sizeof(char));
+				port = malloc(strlen(optarg)+1 * sizeof(char));
 				strcpy(port, optarg);
 				break;
 			case 'd':
 				isData = true;
-				data = malloc(strlen(optarg) * sizeof(char));
+				data = malloc(strlen(optarg)+1 * sizeof(char));
 				strcpy(data, optarg);
 				break;
 			case 'f':
@@ -244,12 +244,12 @@ int main(int argc, char *argv[])
 	char *inputData;
 	if (isData)
 	{
-		inputData = malloc(strlen(data) * sizeof(char));
+		inputData = malloc(strlen(data)+1 * sizeof(char));
 		strcpy(inputData, data);
 	}
 	else if (isFileData)
 	{
-		inputData = malloc(strlen(fileData) * sizeof(char));
+		inputData = malloc(strlen(fileData)+1 * sizeof(char));
 		strcpy(inputData, fileData);
 	}
 	else
